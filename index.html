@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Marin RV CCTV Log Tool</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0f172a; --panel:#17233b; --line:#334155; --text:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; font-family:Inter,system-ui,-apple-system,sans-serif; background:linear-gradient(135deg,#0f172a,#1e293b); color:var(--text); }
+    main { width:min(1100px,calc(100% - 32px)); margin:32px auto; }
+    header { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:20px; }
+    h1 { margin:0; font-size:clamp(1.35rem,4vw,2rem); }
+    .card { background:rgba(23,35,59,.92); border:1px solid var(--line); border-radius:14px; padding:20px; box-shadow:0 14px 40px rgba(0,0,0,.18); }
+    form { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    label { display:grid; gap:6px; color:var(--muted); font-size:.82rem; }
+    input, select, textarea, button { width:100%; border:1px solid var(--line); border-radius:8px; background:#0f172a; color:var(--text); padding:10px 12px; font:inherit; }
+    textarea { resize:vertical; min-height:74px; }
+    .notes { grid-column:1/-1; }
+    button { cursor:pointer; background:var(--accent); border-color:var(--accent); color:#082f49; font-weight:700; }
+    button.secondary { background:transparent; color:var(--text); border-color:var(--line); }
+    .actions { grid-column:1/-1; display:flex; justify-content:flex-end; gap:8px; }
+    .actions button { width:auto; }
+    table { width:100%; border-collapse:collapse; margin-top:16px; }
+    th, td { text-align:left; border-bottom:1px solid var(--line); padding:10px 8px; }
+    th { color:var(--muted); font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; }
+    td { vertical-align:top; }
+    .empty { text-align:center; color:var(--muted); padding:32px 8px; }
+    .status { color:var(--muted); font-size:.85rem; }
+    @media(max-width:760px){ form { grid-template-columns:1fr 1fr; } header{align-items:flex-start} }
+    @media(max-width:500px){ form { grid-template-columns:1fr; } .notes,.actions{grid-column:1} .actions{flex-direction:column} .actions button{width:100%} table{font-size:.85rem} }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Marin RV CCTV Log</h1>
+    <span id="status" class="status"></span>
+  </header>
+  <section class="card">
+    <form id="logForm">
+      <label>Date and time<input id="timestamp" type="datetime-local" required></label>
+      <label>Camera<select id="camera" required><option value="">Select camera</option><option>Main Entrance</option><option>RV Lot</option><option>Perimeter</option><option>Parking</option><option>Loading Area</option><option>Other</option></select></label>
+      <label>Event<select id="event" required><option value="">Select event</option><option>Normal Review</option><option>Suspicious Activity</option><option>Incident</option><option>Maintenance</option><option>Property Damage</option><option>Vehicle Entry</option><option>Vehicle Exit</option></select></label>
+      <label>Reviewed by<input id="reviewer" required placeholder="Initials or name"></label>
+      <label class="notes">Notes<textarea id="notes" placeholder="Add details about the review or incident"></textarea></label>
+      <div class="actions">
+        <button type="button" class="secondary" id="clearBtn">Clear</button>
+        <button type="submit">Add log entry</button>
+      </div>
+    </form>
+  </section>
+  <section class="card" style="margin-top:16px">
+    <table>
+      <thead><tr><th>Date / time</th><th>Camera</th><th>Event</th><th>Reviewed by</th><th>Notes</th><th></th></tr></thead>
+      <tbody id="logRows"><tr><td class="empty" colspan="6">No entries saved.</td></tr></tbody>
+    </table>
+  </section>
+</main>
+<script>
+  const key = 'marin-rv-cctv-log';
+  const form = document.getElementById('logForm');
+  const rows = document.getElementById('logRows');
+  const status = document.getElementById('status');
+  let entries = JSON.parse(localStorage.getItem(key) || '[]');
+
+  function nowLocal() {
+    const d = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
+    return d.toISOString().slice(0,16);
+  }
+  document.getElementById('timestamp').value = nowLocal();
+
+  function render() {
+    if (!entries.length) {
+      rows.innerHTML = '<tr><td class="empty" colspan="6">No entries saved.</td></tr>';
+    } else {
+      rows.innerHTML = entries.map((entry, index) => `<tr>
+        <td>${escapeHtml(entry.timestamp).replace('T',' ')}</td>
+        <td>${escapeHtml(entry.camera)}</td>
+        <td>${escapeHtml(entry.event)}</td>
+        <td>${escapeHtml(entry.reviewer)}</td>
+        <td>${escapeHtml(entry.notes)}</td>
+        <td><button class="secondary" type="button" data-delete="${index}">Delete</button></td>
+      </tr>`).join('');
+    }
+    status.textContent = `${entries.length} saved entry${entries.length === 1 ? '' : 'ies'}`;
+  }
+  function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value || '';
+    return div.innerHTML;
+  }
+  form.addEventListener('submit', event => {
+    event.preventEvent && event.preventEvent();
+    event.preventDefault();
+    entries.unshift({
+      timestamp: document.getElementById('timestamp').value,
+      camera: document.getElementById('camera').value,
+      event: document.getElementById('event').value,
+      reviewer: document.getElementById('reviewer').value,
+      notes: document.getElementById('notes').value
+    });
+    localStorage.setItem(key, JSON.stringify(entries));
+    form.reset();
+    document.getElementById('timestamp').value = nowLocal();
+    render();
+  });
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    form.reset();
+    document.getElementById('timestamp').value = nowLocal();
+  });
+  rows.addEventListener('click', event => {
+    if (!event.target.dataset.delete) return;
+    entries.splice(Number(event.target.dataset.delete), 1);
+    localStorage.setItem(key, JSON.stringify(entries));
+    render();
+  });
+  render();
+</script>
+</body>
+</html>
