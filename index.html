@@ -1,121 +1,212 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Marin RV CCTV Log Tool</title>
-  <style>
-    :root { color-scheme: dark; --bg:#0f172a; --panel:#17233b; --line:#334155; --text:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8; }
-    * { box-sizing:border-box; }
-    body { margin:0; min-height:100vh; font-family:Inter,system-ui,-apple-system,sans-serif; background:linear-gradient(135deg,#0f172a,#1e293b); color:var(--text); }
-    main { width:min(1100px,calc(100% - 32px)); margin:32px auto; }
-    header { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:20px; }
-    h1 { margin:0; font-size:clamp(1.35rem,4vw,2rem); }
-    .card { background:rgba(23,35,59,.92); border:1px solid var(--line); border-radius:14px; padding:20px; box-shadow:0 14px 40px rgba(0,0,0,.18); }
-    form { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
-    label { display:grid; gap:6px; color:var(--muted); font-size:.82rem; }
-    input, select, textarea, button { width:100%; border:1px solid var(--line); border-radius:8px; background:#0f172a; color:var(--text); padding:10px 12px; font:inherit; }
-    textarea { resize:vertical; min-height:74px; }
-    .notes { grid-column:1/-1; }
-    button { cursor:pointer; background:var(--accent); border-color:var(--accent); color:#082f49; font-weight:700; }
-    button.secondary { background:transparent; color:var(--text); border-color:var(--line); }
-    .actions { grid-column:1/-1; display:flex; justify-content:flex-end; gap:8px; }
-    .actions button { width:auto; }
-    table { width:100%; border-collapse:collapse; margin-top:16px; }
-    th, td { text-align:left; border-bottom:1px solid var(--line); padding:10px 8px; }
-    th { color:var(--muted); font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; }
-    td { vertical-align:top; }
-    .empty { text-align:center; color:var(--muted); padding:32px 8px; }
-    .status { color:var(--muted); font-size:.85rem; }
-    @media(max-width:760px){ form { grid-template-columns:1fr 1fr; } header{align-items:flex-start} }
-    @media(max-width:500px){ form { grid-template-columns:1fr; } .notes,.actions{grid-column:1} .actions{flex-direction:column} .actions button{width:100%} table{font-size:.85rem} }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Marin RV &amp; Presco Yard</title>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--text:#1b1f24;--muted:#5b6670;--accent:#5b3fd0;--atext:#fff;--border:#d5dbe1;--ok:#1a7f37;--warn:#b42318;color-scheme:light dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root[data-site="presco"]{--accent:#0b7a75}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171a;--card:#1e2328;--text:#e8ecf0;--muted:#9aa5b0;--accent:#8b72f0;--atext:#10131a;--border:#333b43;--ok:#4cc16b;--warn:#ff7b72}
+:root[data-site="presco"]:not([data-theme="light"]){--accent:#3fc1b9}}
+:root[data-theme="dark"]{--bg:#14171a;--card:#1e2328;--text:#e8ecf0;--muted:#9aa5b0;--accent:#8b72f0;--atext:#10131a;--border:#333b43;--ok:#4cc16b;--warn:#ff7b72}
+:root[data-theme="dark"][data-site="presco"]{--accent:#3fc1b9}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
+main{max-width:640px;margin:0 auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.clock{font-size:1.9rem;font-weight:700}
+.count{font-size:1.2rem;font-weight:700;color:var(--ok);text-align:right}
+.count.due{color:var(--warn)}
+.muted{font-size:.8rem;color:var(--muted)}
+button{font:inherit;border:0;border-radius:8px;background:var(--accent);color:var(--atext);cursor:pointer}
+.big{width:100%;padding:16px;font-size:1.1rem;font-weight:700}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tab{flex:1;padding:14px;font-weight:700;background:transparent;color:var(--text);border:2px solid var(--border)}
+.tab.on{background:var(--accent);color:var(--atext);border-color:var(--accent)}
+.sites .tab{padding:12px;font-size:1rem}
+.banner{border-left:6px solid var(--accent);padding:8px 12px;margin-bottom:12px;background:var(--card);border-radius:8px;font-weight:700;letter-spacing:.03em}
+select{width:100%;padding:10px;margin-bottom:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font:inherit}
+.chips{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.chips button{background:transparent;color:var(--text);border:1px solid var(--border);padding:10px;font-size:.85rem;text-align:left}
+.tr{display:flex;align-items:center;gap:10px;padding:10px;margin-bottom:8px;border:1px solid var(--border);border-radius:8px;font-size:.95rem;font-weight:700;cursor:pointer}
+.tr input{width:22px;height:22px;accent-color:var(--accent)}
+.line{width:100%;background:var(--card);color:var(--text);font-family:inherit;padding:10px;border:1px dashed var(--border);border-radius:8px;margin-top:6px;font-size:.9rem}
+.lock{max-width:640px;margin:0 auto;padding:12px;min-height:100vh;display:flex;align-items:center}
+.lock .card{width:100%;text-align:center;padding:22px 14px}
+.lock h1{margin:0 0 4px;font-size:1.5rem}
+.lock input{width:100%;padding:14px;margin:14px 0 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font:inherit;font-size:1.3rem;text-align:center;letter-spacing:.4em}
+.theme{display:flex;gap:6px;justify-content:flex-end;margin-bottom:10px}
+.theme button{padding:8px 14px;font-size:.85rem;font-weight:700;background:transparent;color:var(--text);border:2px solid var(--border)}
+.theme button.on{background:var(--accent);color:var(--atext);border-color:var(--accent)}
+:root[data-theme="light"]{color-scheme:light}
+:root[data-theme="dark"]{color-scheme:dark}
+.lockerr{min-height:1.2em;margin-top:10px;font-size:.9rem;font-weight:700;color:var(--warn)}
+</style>
 </head>
 <body>
-<main>
-  <header>
-    <h1>Marin RV CCTV Log</h1>
-    <span id="status" class="status"></span>
-  </header>
-  <section class="card">
-    <form id="logForm">
-      <label>Date and time<input id="timestamp" type="datetime-local" required></label>
-      <label>Camera<select id="camera" required><option value="">Select camera</option><option>Main Entrance</option><option>RV Lot</option><option>Perimeter</option><option>Parking</option><option>Loading Area</option><option>Other</option></select></label>
-      <label>Event<select id="event" required><option value="">Select event</option><option>Normal Review</option><option>Suspicious Activity</option><option>Incident</option><option>Maintenance</option><option>Property Damage</option><option>Vehicle Entry</option><option>Vehicle Exit</option></select></label>
-      <label>Reviewed by<input id="reviewer" required placeholder="Initials or name"></label>
-      <label class="notes">Notes<textarea id="notes" placeholder="Add details about the review or incident"></textarea></label>
-      <div class="actions">
-        <button type="button" class="secondary" id="clearBtn">Clear</button>
-        <button type="submit">Add log entry</button>
-      </div>
-    </form>
-  </section>
-  <section class="card" style="margin-top:16px">
-    <table>
-      <thead><tr><th>Date / time</th><th>Camera</th><th>Event</th><th>Reviewed by</th><th>Notes</th><th></th></tr></thead>
-      <tbody id="logRows"><tr><td class="empty" colspan="6">No entries saved.</td></tr></tbody>
-    </table>
-  </section>
+<div class="lock" id="lock">
+  <div class="card">
+    <h1>Marin RV &amp; Presco Yard</h1>
+    <div class="muted">Enter password to continue</div>
+    <input id="pw" type="password" inputmode="numeric" autocomplete="off" placeholder="••••">
+    <button class="big" id="unlock">Unlock</button>
+    <div class="lockerr" id="lockerr"></div>
+  </div>
+</div>
+<main id="app" style="display:none">
+<div class="theme"><button class="thm" data-t="light">&#9728; Light</button><button class="thm" data-t="dark">&#9790; Dark</button></div>
+<div class="tabs sites">
+  <button class="tab on" id="sMarin">Marin RV Storage</button>
+  <button class="tab" id="sPresco">Presco Yard</button>
+</div>
+<div class="banner" id="banner">MARIN RV STORAGE</div>
+
+<div class="card top">
+  <div><div class="clock" id="clock">--:--</div><div class="muted">Novato time</div></div>
+  <div><div class="muted">Next check in</div><div class="count" id="count">5:00</div></div>
+</div>
+
+<div class="tabs"><button class="tab on" id="tabc">Check log</button><button class="tab" id="tabm">Movement log</button></div>
+
+<div class="card" id="pc">
+  <button class="big" id="check">Copy check log</button>
+  <button class="big" id="checkBoth" style="margin-top:10px">Copy check log - both sites</button>
+</div>
+
+<div class="card" id="pm" style="display:none">
+  <select id="cam"></select>
+  <label class="tr"><input type="checkbox" id="trl"> With trailer</label>
+  <div class="chips" id="chips"></div>
+</div>
+
+<div class="muted" id="msg" style="margin-top:10px">Tap a button to copy a log.</div>
+<input class="line" id="last" readonly value="">
 </main>
+
 <script>
-  const key = 'marin-rv-cctv-log';
-  const form = document.getElementById('logForm');
-  const rows = document.getElementById('logRows');
-  const status = document.getElementById('status');
-  let entries = JSON.parse(localStorage.getItem(key) || '[]');
-
-  function nowLocal() {
-    const d = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
-    return d.toISOString().slice(0,16);
-  }
-  document.getElementById('timestamp').value = nowLocal();
-
-  function render() {
-    if (!entries.length) {
-      rows.innerHTML = '<tr><td class="empty" colspan="6">No entries saved.</td></tr>';
-    } else {
-      rows.innerHTML = entries.map((entry, index) => `<tr>
-        <td>${escapeHtml(entry.timestamp).replace('T',' ')}</td>
-        <td>${escapeHtml(entry.camera)}</td>
-        <td>${escapeHtml(entry.event)}</td>
-        <td>${escapeHtml(entry.reviewer)}</td>
-        <td>${escapeHtml(entry.notes)}</td>
-        <td><button class="secondary" type="button" data-delete="${index}">Delete</button></td>
-      </tr>`).join('');
+(function(){
+  var TZ="America/Los_Angeles",STEP=300000;
+  var SITES={
+    marin:{
+      name:"MARIN RV STORAGE",
+      cams:["Main South Entry Gate","North Lot Gate","Container West","East Lot","East Lot 2","Kiosk West","Kiosk East","Kiosk North"],
+      ev:["A vehicle passed by the main road","Staff on routine work","Car entered the site","Car left the site","Pickup truck entered the site","Pickup truck left the site","Tow truck entered the site","Tow truck left the site","Dump truck entered the site","Dump truck left the site","Container truck entered the site","Container truck left the site","Truck entered the site","Truck left the site","RV Truck entered the site","RV Truck left the site","Staff movement inside the site","Pickup truck movement inside the site","Car movement inside the site","Container truck movement inside the site","Roger security car moving around the site","Barbier security car moving around the site"]
+    },
+    presco:{
+      name:"PRESCO YARD",
+      cams:["Main outside gate presco ln","Main Entry Road","Main Entry Gate","Turn Around View East","Middle Pole East -Main Fence Line and A1","Middle Pole West","Middle Pole North","Turn Around Pole West","Turn Around Pole South","South Pole 1","South Pole 2","South Pole 3","G6 Bullet 1","G6 Bullet 2"],
+      ev:["Car entered the site","Car left the site","Pickup truck entered the site","Pickup truck left the site","Tow truck entered the site","Tow truck left the site","Dump truck entered the site","Dump truck left the site","Container truck entered the site","Container truck left the site","Truck entered the site","Truck left the site","Staff movement inside the site","Pickup truck movement inside the site","Car movement inside the site","Container truck movement inside the site","Car movement outside the site","Carrier Truck movement outside the site"]
     }
-    status.textContent = `${entries.length} saved entry${entries.length === 1 ? '' : 'ies'}`;
+  };
+  // each site keeps its own timer and last copied line
+  var state={marin:{due:Date.now()+STEP,last:""},presco:{due:Date.now()+STEP,last:""}};
+  var cur="marin";
+
+  var $=function(i){return document.getElementById(i);};
+  // light/dark switch (remembers choice, defaults to device setting)
+  function applyTheme(t){
+    document.documentElement.setAttribute("data-theme",t);
+    Array.prototype.forEach.call(document.querySelectorAll(".thm"),function(b){b.className="thm"+(b.getAttribute("data-t")===t?" on":"");});
+    try{localStorage.setItem("logtool-theme",t);}catch(e){}
   }
-  function escapeHtml(value) {
-    const div = document.createElement('div');
-    div.textContent = value || '';
-    return div.innerHTML;
-  }
-  form.addEventListener('submit', event => {
-    event.preventEvent && event.preventEvent();
-    event.preventDefault();
-    entries.unshift({
-      timestamp: document.getElementById('timestamp').value,
-      camera: document.getElementById('camera').value,
-      event: document.getElementById('event').value,
-      reviewer: document.getElementById('reviewer').value,
-      notes: document.getElementById('notes').value
+  var theme="light";
+  try{theme=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}catch(e){}
+  try{var st=localStorage.getItem("logtool-theme");if(st==="light"||st==="dark")theme=st;}catch(e){}
+  Array.prototype.forEach.call(document.querySelectorAll(".thm"),function(b){b.onclick=function(){applyTheme(b.getAttribute("data-t"));};});
+  applyTheme(theme);
+
+  var tf=new Intl.DateTimeFormat("en-US",{timeZone:TZ,hour:"numeric",minute:"2-digit",hour12:true});
+  function now(){return tf.format(new Date()).replace(/\s+/g,"").toLowerCase();}
+
+  function copy(t){
+    return new Promise(function(res){
+      var ok=false;
+      try{var a=document.createElement("textarea");a.value=t;a.setAttribute("readonly","");a.style.position="fixed";a.style.top="0";a.style.left="0";a.style.opacity="0";document.body.appendChild(a);a.focus();a.select();a.setSelectionRange(0,t.length);ok=document.execCommand("copy");document.body.removeChild(a);}catch(e){ok=false;}
+      if(ok){res(true);return;}
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){res(true);},function(){res(false);});}else{res(false);}
     });
-    localStorage.setItem(key, JSON.stringify(entries));
-    form.reset();
-    document.getElementById('timestamp').value = nowLocal();
-    render();
-  });
-  document.getElementById('clearBtn').addEventListener('click', () => {
-    form.reset();
-    document.getElementById('timestamp').value = nowLocal();
-  });
-  rows.addEventListener('click', event => {
-    if (!event.target.dataset.delete) return;
-    entries.splice(Number(event.target.dataset.delete), 1);
-    localStorage.setItem(key, JSON.stringify(entries));
-    render();
-  });
-  render();
+  }
+  function done(t){
+    var L=$("last");L.value=t;state[cur].last=t;state[cur].due=Date.now()+STEP;$("msg").textContent="Copying...";
+    copy(t).then(function(ok){
+      $("msg").textContent=ok?"Copied. Now paste in Teams.":"Browser blocked copy. The line below is selected: press Ctrl+C (or long-press and Copy).";
+      $("msg").style.color=ok?"var(--ok)":"var(--warn)";
+      if(!ok){L.focus();L.select();L.setSelectionRange(0,t.length);}
+    });
+  }
+
+  function build(){
+    var S=SITES[cur],s=$("cam");
+    s.innerHTML="";
+    var o=document.createElement("option");o.value="";o.textContent="Camera tag: none";s.appendChild(o);
+    S.cams.forEach(function(c){var p=document.createElement("option");p.value=c;p.textContent=c;s.appendChild(p);});
+    $("trl").checked=false;
+    var box=$("chips");box.innerHTML="";
+    S.ev.forEach(function(e){
+      var b=document.createElement("button");b.textContent=e;
+      b.onclick=function(){
+        var c=s.value,ev=e;
+        if($("trl").checked)ev=ev.replace(/^(Pickup truck|Car|Container truck|Dump truck|Truck)\b/,"$1 with trailer");
+        done((c?c+"-"+S.name+"-":"")+ev+"@"+now());
+      };
+      box.appendChild(b);
+    });
+  }
+
+  function setSite(k){
+    cur=k;
+    document.documentElement.setAttribute("data-site",k);
+    $("sMarin").className="tab"+(k==="marin"?" on":"");
+    $("sPresco").className="tab"+(k==="presco"?" on":"");
+    $("banner").textContent=SITES[k].name;
+    
+    build();
+    $("last").value=state[k].last;
+    $("msg").textContent="Tap a button to copy a log.";
+    $("msg").style.color="";
+    tick();
+    try{localStorage.setItem("logtool-site",k);}catch(e){}
+  }
+
+  function show(m){$("pc").style.display=m?"none":"block";$("pm").style.display=m?"block":"none";$("tabc").className="tab"+(m?"":" on");$("tabm").className="tab"+(m?" on":"");}
+  $("tabc").onclick=function(){show(0);};
+  $("tabm").onclick=function(){show(1);};
+  $("sMarin").onclick=function(){setSite("marin");};
+  $("sPresco").onclick=function(){setSite("presco");};
+
+  $("check").onclick=function(){done(SITES[cur].name+"-Checked all the cameras & Checked all the motions@"+now());};
+
+  $("checkBoth").onclick=function(){
+    done("MARIN RV STORAGE & PRESCO YARD-Checked all the cameras@"+now());
+    // this log covers both sites, so reset both timers
+    state.marin.due=state.presco.due=Date.now()+STEP;
+    state.marin.last=state.presco.last=$("last").value;
+  };
+
+  function tick(){
+    $("clock").textContent=tf.format(new Date());
+    var l=state[cur].due-Date.now();
+    if(l<=0){$("count").textContent="DUE NOW";$("count").className="count due";}
+    else{var x=Math.ceil(l/1000);$("count").textContent=Math.floor(x/60)+":"+("0"+x%60).slice(-2);$("count").className="count";}
+  }
+
+  var PASS="0022";
+  function openApp(){$("lock").style.display="none";$("app").style.display="block";}
+  function tryUnlock(){
+    if($("pw").value===PASS){openApp();}
+    else{$("lockerr").textContent="Wrong password";$("pw").value="";$("pw").focus();}
+  }
+  $("unlock").onclick=tryUnlock;
+  $("pw").onkeydown=function(e){if(e.key==="Enter")tryUnlock();};
+  try{sessionStorage.removeItem("logtool-ok");}catch(e){}
+
+  var start="marin";
+  try{var sv=localStorage.getItem("logtool-site");if(sv&&SITES[sv])start=sv;}catch(e){}
+  setSite(start);
+  setInterval(tick,1000);
+})();
 </script>
 </body>
 </html>
